@@ -67,6 +67,13 @@ class Settings:
                                exit_code=True) == 0
     return self.is_git_svn
 
+  def GetGitSvnRemotePrefix(self):
+    """Return git-svn remote prefix, without trailing slash"""
+    remotes = RunGit(['config', '--get-regexp', r'^svn-remote\..*\.fetch']).splitlines()
+    if remotes and ':' in remotes[0] and remotes[0].endswith('/trunk'):
+      return remotes[0].split()[1].split(':')[1][:-6]
+    raise RuntimeError("Remote prefix not found for git-svn repository")
+
   def GetSVNBranch(self):
     if self.svn_branch is None:
       if not self.GetIsGitSvn():
@@ -80,14 +87,14 @@ class Settings:
       # regexp matching the git-svn line that contains the URL.
       git_svn_re = re.compile(r'^\s*git-svn-id: (\S+)@', re.MULTILINE)
 
+      svn_prefix = self.GetGitSvnRemotePrefix()
+
       # Get the refname and svn url for all refs/remotes/*.
       remotes = RunGit(['for-each-ref', '--format=%(refname)',
-                        'refs/remotes']).splitlines()
+                        svn_prefix]).splitlines()
       svn_refs = {}
       for ref in remotes:
-        # git-svn remote refs are generally directly in the refs/remotes/dir,
-        # not a subdirectory (like refs/remotes/origin/master).
-        if '/' in ref[len('refs/remotes/'):]:
+        if not ref.startswith(svn_prefix + '/'):
           continue
         match = git_svn_re.search(RunGit(['cat-file', '-p', ref]))
         if match:
