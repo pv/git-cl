@@ -11,7 +11,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
-import upload
+import rietveld_upload as upload
 import urllib2
 
 DEFAULT_SERVER = 'codereview.appspot.com'
